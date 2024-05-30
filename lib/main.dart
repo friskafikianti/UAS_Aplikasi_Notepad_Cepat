@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
-  runApp(MyNotepadApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id', null);
+  runApp(const MyNotepadApp());
 }
 
 class MyNotepadApp extends StatelessWidget {
+  const MyNotepadApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -12,12 +18,14 @@ class MyNotepadApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(),
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
+
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -27,45 +35,43 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 122, 141, 156), // Warna abu-abu lebih gelap
+        backgroundColor: Colors.blue,
         leading: IconButton(
-          icon: Icon(Icons.menu, color: Colors.white),
-          onPressed: () {
-            // Tambahkan aksi untuk menu panel
-          },
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () {},
         ),
-        title: Text('My Notes', style: TextStyle(color: Colors.white)),
+        title: const Text('My Notes', style: TextStyle(color: Colors.white)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 50.0),
             child: IconButton(
-              icon: Icon(Icons.search, color: Colors.white),
+              icon: const Icon(Icons.search, color: Colors.white),
               onPressed: () {
-                // Tambahkan aksi untuk tombol search
                 print("Search button pressed");
               },
             ),
           ),
         ],
       ),
-      body: Container(), // Halaman kosong
+      body: Container(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Tambahkan aksi untuk tombol tambah
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => AddNotePage()),
+            MaterialPageRoute(builder: (context) => const AddNotePage()),
           );
         },
-        child: Icon(Icons.add, color: Colors.white),
         tooltip: 'Add Note',
-        backgroundColor: Color.fromARGB(255, 122, 141, 156), // Warna abu-abu lebih gelap
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 }
 
 class AddNotePage extends StatefulWidget {
+  const AddNotePage({super.key});
+
   @override
   _AddNotePageState createState() => _AddNotePageState();
 }
@@ -73,6 +79,11 @@ class AddNotePage extends StatefulWidget {
 class _AddNotePageState extends State<AddNotePage> {
   bool isImportant = false;
   Color backgroundColor = Colors.white;
+  bool showTomorrowButton = false;
+  bool showTimeButton = false;
+  DateTime selectedDate = DateTime.now();
+  String tomorrowButtonText = 'Tomorrow';
+  String timeButtonText = '09.00';
 
   void _openColorPicker() {
     showDialog(
@@ -83,9 +94,9 @@ class _AddNotePageState extends State<AddNotePage> {
             borderRadius: BorderRadius.circular(5.0),
           ),
           child: Container(
-            padding: EdgeInsets.all(10.0),
-            width: 200,
-            height: 215,
+            padding: const EdgeInsets.all(10.0),
+            width: 150,
+            height: 220,
             child: GridView.count(
               crossAxisCount: 4,
               mainAxisSpacing: 10,
@@ -134,7 +145,7 @@ class _AddNotePageState extends State<AddNotePage> {
         ),
         child: Center(
           child: color == backgroundColor
-              ? Icon(Icons.check, color: Colors.black)
+              ? const Icon(Icons.check, color: Colors.black)
               : null,
         ),
       ),
@@ -151,16 +162,24 @@ class _AddNotePageState extends State<AddNotePage> {
   }
 
   void _showReminderPopup() {
+    setState(() {
+      showTomorrowButton = true;
+      showTimeButton = true;
+    });
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          title: const Text(
             'Allow Fast Notepad to run on device startup',
             style: TextStyle(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
-          content: Column(
+          content: const Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -178,23 +197,23 @@ class _AddNotePageState extends State<AddNotePage> {
           actions: [
             TextButton(
               onPressed: () {
-                // Tambahkan aksi untuk "Take Me To Setting"
                 print('Take Me To Setting pressed');
+                Navigator.of(context).pop(); // Close the dialog
               },
-              child: Text('Take Me To Setting'),
+              child: const Text('Take Me To Setting'),
             ),
             TextButton(
               onPressed: () {
-                // Tambahkan aksi untuk "don't show again"
                 print('Don\'t show again pressed');
+                Navigator.of(context).pop(); // Close the dialog
               },
-              child: Text('Don\'t show again'),
+              child: const Text('Don\'t show again'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Later'),
+              child: const Text('Later'),
             ),
           ],
         );
@@ -202,19 +221,49 @@ class _AddNotePageState extends State<AddNotePage> {
     );
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    DateTime? picked = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return CustomDatePickerDialog(
+          initialDate: selectedDate,
+          firstDate: DateTime(2000),
+          lastDate: DateTime(2101),
+        );
+      },
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+        tomorrowButtonText = DateFormat('dd MMMM', 'id').format(selectedDate);
+      });
+    }
+  }
+
+  Future<void> _selectTime(BuildContext context) async {
+    TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 9, minute: 0),
+    );
+    if (picked != null) {
+      setState(() {
+        timeButtonText = picked.format(context);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 122, 141, 156), // Warna abu-abu lebih gelap
+        backgroundColor: Colors.blue, // Mengubah warna navbar menjadi biru
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            // Tambahkan aksi untuk tombol back
             Navigator.pop(context);
             print("navigate up");
           },
-          tooltip: 'Navigate Up', // Menambahkan tooltip
+          tooltip: 'Navigate Up',
         ),
         actions: [
           Padding(
@@ -235,7 +284,7 @@ class _AddNotePageState extends State<AddNotePage> {
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: IconButton(
-              icon: Icon(Icons.color_lens, color: Colors.white),
+              icon: const Icon(Icons.color_lens, color: Colors.white),
               onPressed: _openColorPicker,
               tooltip: 'Colour of this note',
             ),
@@ -243,26 +292,26 @@ class _AddNotePageState extends State<AddNotePage> {
           Padding(
             padding: const EdgeInsets.only(right: 50.0),
             child: PopupMenuButton(
-              icon:  Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               tooltip: 'Opsi Lainnya',
               itemBuilder: (BuildContext context) => <PopupMenuEntry>[
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'reminder',
                   child: Text('Reminder'),
                 ),
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'undo_edit',
                   child: Text('Undo Edit'),
                 ),
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'to_the_end',
                   child: Text('To the End'),
                 ),
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'delete',
                   child: Text('Delete'),
                 ),
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'share',
                   child: Text('Share'),
                 ),
@@ -278,9 +327,165 @@ class _AddNotePageState extends State<AddNotePage> {
           ),
         ],
       ),
-      body: Container(
-        color: backgroundColor, // Mengubah warna background
-      ), // Halaman kosong
+      body: Stack(
+        children: [
+          Container(
+            color: backgroundColor,
+          ),
+          if (showTomorrowButton)
+            Positioned(
+              top: 20,
+              left: 20,
+              child: ElevatedButton(
+                onPressed: () {
+                  _selectDate(context);
+                },
+                child: Text(
+                  tomorrowButtonText,
+                  style: const TextStyle(fontSize: 15, color: Colors.black),
+                ),
+              ),
+            ),
+          if (showTimeButton)
+            Positioned(
+              top: 20,
+              left: 150,
+              child: ElevatedButton(
+                onPressed: () {
+                  _selectTime(context);
+                },
+                child: Text(
+                  timeButtonText,
+                  style: const TextStyle(fontSize: 15, color: Colors.black),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class CustomDatePickerDialog extends StatefulWidget {
+  final DateTime initialDate;
+  final DateTime firstDate;
+  final DateTime lastDate;
+
+  const CustomDatePickerDialog({super.key, 
+    required this.initialDate,
+    required this.firstDate,
+    required this.lastDate,
+  });
+
+  @override
+  _CustomDatePickerDialogState createState() => _CustomDatePickerDialogState();
+}
+
+class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
+  late DateTime selectedDate;
+  late int selectedYear;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedDate = widget.initialDate;
+    selectedYear = widget.initialDate.year;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final days = DateFormat.EEEE('id').format(selectedDate);
+    final months = DateFormat.MMMM('id').format(selectedDate);
+    final dates = DateFormat.d('id').format(selectedDate);
+    final years = DateFormat.y('id').format(selectedDate);
+
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      child: SizedBox(
+        width: 300,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              color: Colors.blue,
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                children: [
+                  Text(days, style: const TextStyle(color: Colors.white, fontSize: 15)),
+                  Text(months, style: const TextStyle(color: Colors.white, fontSize: 25)),
+                  Text(dates, style: const TextStyle(color: Colors.white, fontSize: 50)),
+                  GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return Dialog(
+                            child: SizedBox(
+                              width: 250,
+                              height: 300,
+                              child: YearPicker(
+                                selectedDate: selectedDate,
+                                onChanged: (DateTime dateTime) {
+                                  setState(() {
+                                    selectedYear = dateTime.year;
+                                    selectedDate = DateTime(selectedYear, selectedDate.month, selectedDate.day);
+                                    Navigator.pop(context);
+                                  });
+                                },
+                                firstDate: widget.firstDate,
+                                lastDate: widget.lastDate,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    child: Text(
+                      years,
+                      style: const TextStyle(color: Colors.white, fontSize: 25),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              color: Colors.white,
+              child: CalendarDatePicker(
+                initialDate: selectedDate,
+                firstDate: widget.firstDate,
+                lastDate: widget.lastDate,
+                onDateChanged: (DateTime date) {
+                  setState(() {
+                    selectedDate = date;
+                  });
+                },
+                selectableDayPredicate: (DateTime date) {
+                  return true;
+                },
+              ),
+            ),
+            ButtonBar(
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('BATAL', style: TextStyle(color: Colors.blue)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(selectedDate);
+                  },
+                  child: const Text('OK', style: TextStyle(color: Colors.blue)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
