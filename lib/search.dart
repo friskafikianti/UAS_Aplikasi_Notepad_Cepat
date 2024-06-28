@@ -1,53 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'note.dart';
 import 'add_note_page.dart';
 import 'edit_note_page.dart';
 import 'settings_page.dart';
 import 'package:flutter/services.dart';
 import 'recycle_bin.dart';
-import 'search.dart';
+import 'main.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('id', null);
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SearchPage extends StatefulWidget {
+  final String keyword;
+  const SearchPage({super.key, required this.keyword});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Notepad Cepat',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-      ),
-      themeMode: ThemeMode.light, // Default theme mode
-      home: const MyHomePage(),
-    );
-  }
+  _SearchPageState createState() => _SearchPageState();
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  final List<Note> _notes = [];
+class _SearchPageState extends State<SearchPage> {
+  List<Note> _filteredNotes = [];
   bool _showMenu = false; // Menambahkan variabel untuk menu
   Color backgroundColor = Colors.white;
   Color appBarColor = Colors.blue;
   Color floatingActionButtonColor = Colors.blue;
   bool _darkTheme = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredNotes = getNotes(widget.keyword);
+  }
+
+    List<Note> getNotes(String keyword) {
+    // Implementasikan logika untuk mendapatkan note yang sesuai dengan keyword
+    return _filteredNotes.where((note) {
+      return note.title.contains(keyword) || note.content.contains(keyword);
+    }).toList();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -71,15 +59,20 @@ class _MyHomePageState extends State<MyHomePage> {
               });
             },
           ),
-          title: const Text('My Notes', style: TextStyle(color: Colors.white)),
+          title: Row(
+            children: [
+              const Icon(Icons.search),
+              const SizedBox(width: 8),
+              Text(widget.keyword),
+            ],
+          ),
+
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 50.0),
               child: IconButton(
                 icon: const Icon(Icons.search, color: Colors.white),
-                onPressed: () {
-                  _showSearchPopup();
-                }, // Ubah onPressed di sini
+                onPressed: _showSearchPopup, // Ubah onPressed di sini
               ),
             ),
           ],
@@ -89,9 +82,9 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Stack(
             children: [
               ListView.builder(
-                itemCount: _notes.length,
+                itemCount: _filteredNotes.length,
                 itemBuilder: (context, index) {
-                  Note note = _notes[index];
+                  Note note = _filteredNotes[index];
                   return Card(
                     child: ListTile(
                       title: Text(note.title),
@@ -109,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               note: note,
                               onSave: (newNote) {
                                 setState(() {
-                                  _notes[index] = newNote;
+                                  _filteredNotes[index] = newNote;
                                 });
                               },
                             ),
@@ -147,6 +140,12 @@ class _MyHomePageState extends State<MyHomePage> {
                             setState(() {
                               _showMenu = false; // Hide menu
                             });
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const MyHomePage(),
+                              ),
+                            );
                           },
                         ),
                         ListTile(
@@ -213,7 +212,7 @@ class _MyHomePageState extends State<MyHomePage> {
               MaterialPageRoute(
                   builder: (context) => AddNotePage(onSave: (note) {
                         setState(() {
-                          _notes.add(note);
+                          _filteredNotes.add(note);
                         });
                       })),
             );
@@ -230,7 +229,6 @@ class _MyHomePageState extends State<MyHomePage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        TextEditingController searchController = TextEditingController();
         return AlertDialog(
           title: const Text('Search in all folders'),
           content: const TextField(
@@ -243,22 +241,15 @@ class _MyHomePageState extends State<MyHomePage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        SearchPage(keyword: searchController.text),
-                  ),
-                );
               },
-              child: const Text('Search'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
                 // Tambahkan logika pencarian di sini
                 Navigator.pop(context);
               },
-              child: const Text('Cancel'),
+              child: const Text('Search'),
             ),
           ],
         );
@@ -317,10 +308,10 @@ class _MyHomePageState extends State<MyHomePage> {
       // <--- Add async here
       if (value == 'completed') {
         setState(() {
-          _notes[index].color = Colors.green; // Change the color to green
+          _filteredNotes[index].color = Colors.green; // Change the color to green
         });
       } else if (value == 'copy') {
-        final textToCopy = _notes[index].content; // Get the text to copy
+        final textToCopy = _filteredNotes[index].content; // Get the text to copy
         ClipboardData data = ClipboardData(text: textToCopy);
         await Clipboard.setData(data);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -331,7 +322,7 @@ class _MyHomePageState extends State<MyHomePage> {
         print('Move to folder clicked');
       } else if (value == 'delete') {
         setState(() {
-          Note deletedNote = _notes.removeAt(index);
+          Note deletedNote = _filteredNotes.removeAt(index);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -381,7 +372,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _showThemePopup() {
+   void _showThemePopup() {
     showDialog(
       context: context,
       builder: (BuildContext context) {

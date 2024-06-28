@@ -30,8 +30,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  path_provider: ^2.0.1
   flutter_vector_icons: ^2.0.0
+  shared_preferences: ^2.0.13
+  flutter_time_picker_spinner: ^2.0.0
   intl: ^0.17.0
+  share_plus: ^3.0.4
+  image_picker: ^0.8.5+3
+  uuid: ^3.0.4
+  provider: ^6.0.0
+
 
 
   # The following adds the Cupertino Icons font to your application.

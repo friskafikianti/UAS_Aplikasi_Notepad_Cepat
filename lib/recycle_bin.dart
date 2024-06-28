@@ -1,53 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'note.dart';
-import 'add_note_page.dart';
 import 'edit_note_page.dart';
 import 'settings_page.dart';
 import 'package:flutter/services.dart';
-import 'recycle_bin.dart';
+import 'main.dart';
 import 'search.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('id', null);
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class RecycleBinPage extends StatefulWidget {
+  const RecycleBinPage({super.key, this.deletedNote});
+  final Note? deletedNote;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Notepad Cepat',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-      ),
-      themeMode: ThemeMode.light, // Default theme mode
-      home: const MyHomePage(),
-    );
-  }
+  _RecycleBinPageState createState() => _RecycleBinPageState();
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
+class _RecycleBinPageState extends State<RecycleBinPage> {
   final List<Note> _notes = [];
   bool _showMenu = false; // Menambahkan variabel untuk menu
   Color backgroundColor = Colors.white;
   Color appBarColor = Colors.blue;
   Color floatingActionButtonColor = Colors.blue;
   bool _darkTheme = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.deletedNote != null) {
+      _notes.add(widget.deletedNote!);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +52,8 @@ class _MyHomePageState extends State<MyHomePage> {
               });
             },
           ),
-          title: const Text('My Notes', style: TextStyle(color: Colors.white)),
+          title:
+              const Text('Recycle-bin', style: TextStyle(color: Colors.white)),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 50.0),
@@ -79,7 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 icon: const Icon(Icons.search, color: Colors.white),
                 onPressed: () {
                   _showSearchPopup();
-                }, // Ubah onPressed di sini
+                },
               ),
             ),
           ],
@@ -147,6 +129,12 @@ class _MyHomePageState extends State<MyHomePage> {
                             setState(() {
                               _showMenu = false; // Hide menu
                             });
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const MyHomePage(),
+                              ),
+                            );
                           },
                         ),
                         ListTile(
@@ -156,13 +144,6 @@ class _MyHomePageState extends State<MyHomePage> {
                             setState(() {
                               _showMenu = false; // Hide menu
                             });
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const RecycleBinPage(),
-                              ),
-                            );
-                            // Navigate to RecycleBinPage
                           },
                         ),
                         ListTile(
@@ -172,7 +153,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             setState(() {
                               _showMenu = false; // Hide menu
                             });
-                            _showNewFolderDialog(context);
+                             _showNewFolderDialog(context);
                           },
                         ),
                         ListTile(
@@ -208,19 +189,30 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => AddNotePage(onSave: (note) {
-                        setState(() {
-                          _notes.add(note);
-                        });
-                      })),
+            List<Note> deletedNotes =
+                List.from(_notes); // Simpan catatan yang dihapus sementara
+            setState(() {
+              _notes.clear(); // Hapus semua catatan dari Recycle Bin
+            });
+
+            // Tampilkan SnackBar dengan aksi undo
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Recycle bin cleared'),
+                action: SnackBarAction(
+                  label: 'UNDO',
+                  onPressed: () {
+                    setState(() {
+                      _notes.addAll(
+                          deletedNotes); // Kembalikan catatan yang dihapus
+                    });
+                  },
+                ),
+              ),
             );
           },
-          tooltip: 'Add Note',
           backgroundColor: floatingActionButtonColor,
-          child: const Icon(Icons.add, color: Colors.white),
+          child: const Icon(Icons.delete_sweep, color: Colors.white),
         ),
       ),
     );
@@ -331,12 +323,7 @@ class _MyHomePageState extends State<MyHomePage> {
         print('Move to folder clicked');
       } else if (value == 'delete') {
         setState(() {
-          Note deletedNote = _notes.removeAt(index);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-                builder: (context) => RecycleBinPage(deletedNote: deletedNote)),
-          );
+          _notes.removeAt(index);
         });
       } else if (value == 'cancel') {
         // Add code to handle canceling the action here
@@ -381,7 +368,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _showThemePopup() {
+   void _showThemePopup() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
